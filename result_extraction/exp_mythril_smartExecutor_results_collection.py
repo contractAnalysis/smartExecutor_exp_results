@@ -4,7 +4,6 @@ Created on Sat Aug 13 15:36:09 2022
 
 @author: 18178
 """
-root='C:\\22_summer_exp\\SmartExecutor_experiment_data\\'
 
 import sys
 import os
@@ -15,7 +14,7 @@ import shutil
 import math
 
 import pandas as pd
-sys.path.append(root) # the project path on Windows
+sys.path.append('C:\\22_summer_exp\\DataPreparation\\') # the project path on Windows
 
 from result_extraction import raw_result_extraction
 
@@ -33,18 +32,18 @@ flag_ftn=True
 
 
 base_dirs=[
-    # root+'exp_mythril_smartExecutor\\results_1800s\\1st\\',
-    # root+'exp_mythril_smartExecutor\\results_1800s\\2nd\\',
-    # root+'exp_mythril_smartExecutor\\results_1800s\\3rd\\',    
-    root+'exp_mythril_smartExecutor\\results_900s\\1st\\',
-    # root+'exp_mythril_smartExecutor\\results_900s\\2nd\\',
-    # root+'exp_mythril_smartExecutor\\results_900s\\3rd\\'
+    'C:\\22_summer_exp\\exp_mythril_smartExecutor\\results_1800s\\1st\\',
+    'C:\\22_summer_exp\\exp_mythril_smartExecutor\\results_1800s\\2nd\\',
+    'C:\\22_summer_exp\\exp_mythril_smartExecutor\\results_1800s\\3rd\\',    
+    'C:\\22_summer_exp\\exp_mythril_smartExecutor\\results_900s\\1st\\',
+    'C:\\22_summer_exp\\exp_mythril_smartExecutor\\results_900s\\2nd\\',
+    'C:\\22_summer_exp\\exp_mythril_smartExecutor\\results_900s\\3rd\\'
     ]
  
 result_folder_prefix=['mythril_group','smartExecutor_group','smartExecutor_group']
 tools=['mythril','smartExecutor','smartExecutor_phase1']
-# result_folder_prefix=['smartExecutor_group']
-# tools=['smartExecutor']
+result_folder_prefix=['smartExecutor_group']
+tools=['smartExecutor']
 
 for i, base_dir in enumerate(base_dirs):    
     for index, tool in enumerate(tools):
@@ -59,8 +58,6 @@ for i, base_dir in enumerate(base_dirs):
                                                           result_folder_prefix[index],
                                                           tool,
                                                           flag_ftn)
-
-
 
 
 

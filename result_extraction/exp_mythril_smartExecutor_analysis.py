@@ -4,7 +4,7 @@ Created on Sat Aug 13 16:29:28 2022
 
 @author: 18178
 """
-root='C:\\22_summer_exp\\SmartExecutor_experiment_data\\'
+
 
 import sys
 import os
@@ -15,11 +15,46 @@ import shutil
 import math
 
 import pandas as pd
-sys.path.append(root) # the project path on Windows
+sys.path.append('C:\\22_summer_exp\\DataPreparation\\') # the project path on Windows
 
 from result_extraction import raw_result_extraction
 from utils import helper
 
+
+#*********************************************************************
+# Parameter setting
+#*********************************************************************
+
+#=======================================================
+# get data from collected results for timeout 1800s and 900s
+# Mythril vs Phase 1 of SmartExecutor
+#======================================================
+parent_dir='C:\\22_summer_exp\\exp_mythril_smartExecutor\\'
+base_dirs=[
+    'C:\\22_summer_exp\\exp_mythril_smartExecutor\\results_1800s\\1st\\',
+    'C:\\22_summer_exp\\exp_mythril_smartExecutor\\results_1800s\\2nd\\',
+    'C:\\22_summer_exp\\exp_mythril_smartExecutor\\results_1800s\\3rd\\',    
+    'C:\\22_summer_exp\\exp_mythril_smartExecutor\\results_900s\\1st\\',
+    'C:\\22_summer_exp\\exp_mythril_smartExecutor\\results_900s\\2nd\\',
+    'C:\\22_summer_exp\\exp_mythril_smartExecutor\\results_900s\\3rd\\'
+]
+
+# mark='mythril_vs_smartExecutor_phase1_'
+
+cases=['mythril_vs_smartExecutor_phase1','mythril_vs_smartExecutor']
+targets=['1800s_1st','1800s_2nd','1800s_3rd','900s_1st','900s_2nd','900s_3rd'] 
+tools=['mythril','smartExecutor','smartExecutor_phase1']
+
+
+
+
+
+
+
+
+#*********************************************************************
+#  code area
+#*********************************************************************
 def convert_integer(x:str,solidity:str):
     if x not in ['False']:
         return int(x)
@@ -80,6 +115,27 @@ def get_general_data(tool:str,base_dir:str):
     count_states=df_results_left['num_states'].sum()   
     return [total_contracts, total_time,total_bugs,count_filtered_out,count_left,count_time,count_states,count_bugs,count_ave_cov]
 
+
+
+#=======================================================
+# get the general data from results
+#======================================================
+
+general_data=[]
+for i, base_dir in enumerate(base_dirs):
+    target=targets[i]
+    for index, tool in enumerate(tools):
+        re=get_general_data(tool,base_dir)
+        general_data.append([target+"_"+tool]+re)
+df_general_data=pd.DataFrame(general_data)
+columns=['tool_results','total_contracts','total_time(h)','total_bugs','#_filtered_out','#_left','total_time_left(h)','total_states','total_bugs_left','ave_cov_left']
+df_general_data.columns=columns
+df_general_data=df_general_data.T
+df_general_data.to_csv(parent_dir+"x_general_data_from_results.csv")
+
+
+
+
 def get_data_from_same_contracts(tool1:str,tool2:str,base_dir:str):
     total_contracts=0
     total_time_1=0
@@ -129,73 +185,36 @@ def get_data_from_same_contracts(tool1:str,tool2:str,base_dir:str):
 
 
 #=======================================================
-# collect all results for timeout 1800s and 900s
+# get the data from the same set of contracts for each run ( i.e., not on the averaged results of the three runs))
 #======================================================
-parent_dir='C:\\22_summer_exp\\exp_mythril_smartExecutor\\'
-base_dirs=[
-    'C:\\22_summer_exp\\exp_mythril_smartExecutor\\results_1800s\\1st\\',
-    'C:\\22_summer_exp\\exp_mythril_smartExecutor\\results_1800s\\2nd\\',
-    'C:\\22_summer_exp\\exp_mythril_smartExecutor\\results_1800s\\3rd\\',    
-    'C:\\22_summer_exp\\exp_mythril_smartExecutor\\results_900s\\1st\\',
-    'C:\\22_summer_exp\\exp_mythril_smartExecutor\\results_900s\\2nd\\',
-    'C:\\22_summer_exp\\exp_mythril_smartExecutor\\results_900s\\3rd\\'
-]
 
-# mark='mythril_vs_smartExecutor_phase1_'
-# targets=['1800s_1st','1800s_2nd','1800s_3rd','900s_1st','900s_2nd','900s_3rd'] 
-# tools=['mythril','smartExecutor_phase1']
+data_on_same_contracts=[['results','total_contracts','total_time_1','total_bugs_1','total_state_1','ave_cov_1','total_time_2','total_bugs_2','total_state_2','ave_cov_2']]
+time_diff=[]
+bug_diff=[]
+cov_diff=[]
+for i, base_dir in enumerate(base_dirs):
+    target=targets[i]
+    re,time,bug,cov=get_data_from_same_contracts(tools[0],tools[1],base_dir)
+    data_on_same_contracts.append([target]+re)
+    time_diff.append(time)
+    bug_diff.append(bug)
+    cov_diff.append(cov)
 
-mark='mythril_vs_smartExecutor_'
-targets=['1800s_1st','1800s_2nd','1800s_3rd','900s_1st','900s_2nd','900s_3rd'] 
-tools=['mythril','smartExecutor']
-
-
-# # --------------------------------------
-# # get the general data from results
-# general_data=[]
-# for i, base_dir in enumerate(base_dirs):
-#     target=targets[i]
-#     for index, tool in enumerate(tools):
-#         re=get_general_data(tool,base_dir)
-#         general_data.append([target+"_"+tool]+re)
-
-# df_general_data=pd.DataFrame(general_data)
-# columns=['tool_results','total_contracts','total_time(h)','total_bugs','#_filtered_out','#_left','total_time_left(h)','total_states','total_bugs_left','ave_cov_left']
-# df_general_data.columns=columns
-# df_general_data=df_general_data.T
-# df_general_data.to_csv(parent_dir+mark+"general_data_from_results.csv")
+df_general_data_same=pd.DataFrame(data_on_same_contracts)
+df_general_data_same=df_general_data_same.T
+df_general_data_same.to_csv(parent_dir+"x_general_data_on_same_contracts.csv",index=False)
+df_time_diff=pd.DataFrame(time_diff).T
+df_bug_diff=pd.DataFrame(bug_diff).T
+df_cov_diff=pd.DataFrame(cov_diff).T
 
 
 
 
+#=======================================================
+# combine the results for the same tool under the same timemout.
+# average the results of the three runs.
+#======================================================
 
-# # --------------------------------------
-# # get the data from the same set of contracts
-# data_on_same_contracts=[['results','total_contracts','total_time_1','total_bugs_1','total_state_1','ave_cov_1','total_time_2','total_bugs_2','total_state_2','ave_cov_2']]
-# time_diff=[]
-# bug_diff=[]
-# cov_diff=[]
-# for i, base_dir in enumerate(base_dirs):
-#     target=targets[i]
-#     re,time,bug,cov=get_data_from_same_contracts(tools[0],tools[1],base_dir)
-#     data_on_same_contracts.append([target]+re)
-#     time_diff.append(time)
-#     bug_diff.append(bug)
-#     cov_diff.append(cov)
-
-# df_general_data_same=pd.DataFrame(data_on_same_contracts)
-# df_general_data_same=df_general_data_same.T
-# df_general_data_same.to_csv(parent_dir+mark+"general_data_on_same_contracts.csv",index=False)
-# df_time_diff=pd.DataFrame(time_diff).T
-# df_bug_diff=pd.DataFrame(bug_diff).T
-# df_cov_diff=pd.DataFrame(cov_diff).T
-
-
-
-
-# --------------------------------------
-# combine the results for the same tool under the same timemout
-# get the average for time,state, coverage, and bug
 def get_average_data(tool:str,base_dirs:list):
     assert len(base_dirs)==3
     suffix=['_x','_y','_z']
@@ -219,42 +238,24 @@ def get_average_data(tool:str,base_dirs:list):
     return df_combine           
 
 
-# --------------------------------------
-# 1800s timeout
-df_mythril_1800s=get_average_data(tools[0],base_dirs[0:3])
-df_mythril_1800s.to_csv(parent_dir+tools[0]+"_1800s_results.csv",index=False)
-
-df_smartExecutor_1800s=get_average_data(tools[1],base_dirs[0:3]) 
-df_smartExecutor_1800s.to_csv(parent_dir+tools[1]+"_1800s_results.csv",index=False) 
-
-df_mythril_1800s_needed=df_mythril_1800s[['solidity','solc','contract','ave_time','ave_state','ave_bug','ave_cov']]
-df_smartExecutor_1800s_needed=df_smartExecutor_1800s[['solidity','solc','contract','ave_time','ave_state','ave_bug','ave_cov']]
-
-df_mythril_1800s_needed.columns=['solidity','solc','contract','ave_time_x','ave_state_x','ave_bug_x','ave_cov_x']
-df_smartExecutor_1800s_needed.columns=['solidity','solc','contract','ave_time_y','ave_state_y','ave_bug_y','ave_cov_y']
-
-df_averaged_1800s=df_mythril_1800s_needed.merge(df_smartExecutor_1800s_needed,on=['solidity','solc','contract'])
-df_averaged_1800s.to_csv(parent_dir+mark+'averaged_results_1800s_same_contracts.csv')
-
-
-
-# --------------------------------------
-# 900s timeout  
-df_mythril_900s=get_average_data(tools[0],base_dirs[3:6])
-df_mythril_900s.to_csv(parent_dir+tools[0]+"_900s_results.csv",index=False)  
-    
-df_smartExecutor_900s=get_average_data(tools[1],base_dirs[3:6])
-df_smartExecutor_900s.to_csv(parent_dir+tools[1]+"_900s_results.csv",index=False)
-
-df_mythril_900s_needed=df_mythril_900s[['solidity','solc','contract','ave_time','ave_state','ave_bug','ave_cov']]
-df_smartExecutor_900s_needed=df_smartExecutor_900s[['solidity','solc','contract','ave_time','ave_state','ave_bug','ave_cov']]
-
-df_mythril_900s_needed.columns=['solidity','solc','contract','ave_time_x','ave_state_x','ave_bug_x','ave_cov_x']
-df_smartExecutor_900s_needed.columns=['solidity','solc','contract','ave_time_y','ave_state_y','ave_bug_y','ave_cov_y']
-
-df_averaged_900s=df_mythril_900s_needed.merge(df_smartExecutor_900s_needed,on=['solidity','solc','contract'])
-df_averaged_900s.to_csv(parent_dir+mark+'averaged_results_900s_same_contracts.csv')
+timeouts=[1800,900]
+timeouts_paths=[[0,3],[3,6]]
+for idx,timeout in enumerate(timeouts):
+    for tool in tools:
+        # --------------------------------------
+        # 1800s timeout
+        df_data=get_average_data(tool,base_dirs[timeouts_paths[idx][0]:timeouts_paths[idx][1]])
+       
+        df_data.to_csv(parent_dir+tool+"_x_combined_averaged_"+str(timeout)+"s_results.csv",index=False)
+       
         
+ # df_data_needed=df_data[['solidity','solc','contract','ave_time','ave_state','ave_bug','ave_cov']]       
+
+
+
+#=======================================================
+# Mythril vs SmartExecutor on the same set of contracts(averaged)
+#======================================================
 
 def get_general_averaged_data(df_data:pd.DataFrame):
     total_contracts=df_data.shape[0]
@@ -264,133 +265,343 @@ def get_general_averaged_data(df_data:pd.DataFrame):
     total_bugs_2=df_data['ave_bug_y'].sum()
     total_state_1=df_data['ave_state_x'].sum()
     total_state_2=df_data['ave_state_y'].sum()
-
-
     ave_cov_1=df_data['ave_cov_x'].mean()
     ave_cov_2=df_data['ave_cov_y'].mean()
+    
+    general_data=[total_contracts,total_time_1,total_state_1,total_bugs_1,ave_cov_1]+\
+        [total_time_2,total_state_2,total_bugs_2,ave_cov_2]
+    return general_data
+
+timeouts=[1800,900]
+case='mythril_vs_smartExecutor'
+tools=['mythril','smartExecutor']
+
+general_data=[['','total contracts','total_time1','total_states1','total_bugs1','avg_cov1','total_time2','total_states2','total_bugs2','avg_cov2']]
+for timeout in timeouts:    
+    # combine the results of the considered tools   
+    df_combine=pd.DataFrame()
+    for tool in tools:
+        combined_csv_name=tool+"_x_combined_averaged_"+str(timeout)+"s_results.csv"
+        df_data=pd.read_csv(parent_dir+combined_csv_name)
+        df_data_needed=df_data[['solidity','solc','contract','ave_time','ave_state','ave_bug','ave_cov']]
+    
+        if df_combine.empty:
+            df_combine=df_data_needed
+        else:
+            df_combine=df_combine.merge(df_data_needed,on=['solidity','solc','contract'])
+    
+    # get the data from the combined results
+    df_combine.to_csv(parent_dir+case+"_x_combined_averaged_"+str(timeout)+"s_results.csv",index=False)
+    re=get_general_averaged_data(df_combine)
+    results_for=str(timeout)+"s results"
+    general_data.append([results_for]+re)
+    
+df_general=pd.DataFrame(general_data)
+df_general=df_general.T
+df_general.to_csv(parent_dir+case+"_general_data_on_combined_averaged_data.csv",index=False)
+    
+
+
+
+
+#=============================================================
+# plot on the difference Distributions of the four metric data series
+#=============================================================
+
+import numpy 
+import random
+
+
+from utils import plot_helper
+import matplotlib.pyplot as plt
+
+def plot_differences_of_metrics(target,data,ranges,ranges_key,x_labels,y_labels):
+    
+    colors=[(0.2, 0.4, 0.6, 0.6),'orange','green','purple']
+    
+    fig, axes = plt.subplots(nrows=2, ncols=2,figsize=(8,5))
+    width=0.4
+    for index, ax in enumerate( axes.flatten()):    
+        plot_ranges=ranges[ranges_keys[index]]   
+        name=plot_helper.retrieve_names(plot_ranges)
+        ticks = np.arange(len(name))  
+     
+        plot_data=plot_helper.count_items(data[index],plot_ranges) 
+        
+        y_label=y_labels[index]
+        x_label=x_labels[index]       
+  
+      
+        bars=ax.bar(ticks, plot_data, width,color=colors[index])
+        ax.set_ylabel(y_label)
+        ax.set_xlabel(x_label)
+        ax.set_xticks(ticks)
+        ax.set_xticklabels(name)
+    
+        if index==0:        
+            ax.legend(loc='best')
+        for bar in bars:
+            yval = bar.get_height()
+            ax.text(bar.get_x(), yval-1, yval)
+        ax.spines['right'].set_visible(False)
+        ax.spines['top'].set_visible(False)
+    
+    fig.tight_layout()  
+    plt.savefig(parent_dir+"diff_state_time_bug_cov"+target+".pdf")  
+    plt.show()
+    
+
+ranges={
+        'state_diff_ranges':[['[','min',-1000,']'],['(',-1000,0,']'],['(',0,2000,']'],['(',2000,4000,']'],['(',4000,'max',']']],
+        'time_diff_ranges':[['[','min',0,']'],['(',0,250,']'],['(',250,500,']'],['(',500,'max',']']],
+        'bug_diff_ranges':[['[','min',-5,')'],['[',-5,0,')'],[0],['(',0,5,']'],['(',5,'max',']']],
+        'cov_diff_ranges':[['[','min',-5,')'],['[',-5,0,')'],[0],['(',0,5,']'],['(',5,'max',']']],
+        }
+
+ranges_keys=['state_diff_ranges','time_diff_ranges','bug_diff_ranges','cov_diff_ranges']
+y_labels=['Number of Contracts','Number of Contracts','Number of Contracts','Number of Contracts']
+x_labels=['Difference in the Number of States','Time Difference (s)','Difference in the Number of Bugs','Coverage Difference (%)']
+
+
+
+#=======================================================
+# plot: Mythril vs SmartExecutor on the same set of contracts(averaged,combined)
+#======================================================
+timeouts=[1800,900]
+case='mythril_vs_smartExecutor'
+
+for timeout in timeouts:
+    # get the differences for each metrics
+    combined_csv=case+"_x_combined_averaged_"+str(timeout)+"s_results.csv"
+    df_data=pd.read_csv(parent_dir+combined_csv)
+
     time_diff=df_data.apply(lambda x: x.ave_time_x - x.ave_time_y, axis=1).astype(float)
     bug_diff=df_data.apply(lambda x: x.ave_bug_x - x.ave_bug_y, axis=1).astype(float)
     cov_diff=df_data.apply(lambda x: x.ave_cov_x - x.ave_cov_y, axis=1).astype(float)
     state_diff=df_data.apply(lambda x: x.ave_state_x - x.ave_state_y, axis=1).astype(int)
+
+
+    data=[state_diff,time_diff,bug_diff,cov_diff]
+    target="_"+case+'_'+str(timeout)
+    
+    plot_differences_of_metrics(target,data,ranges,ranges_keys,x_labels,y_labels)
+
+
+
+
+
+
+#=======================================================
+# SmartExecutor vs Phase 1 of SmartExecutor on the same set of contracts(averaged)
+#======================================================
+
+def get_general_averaged_data(df_data:pd.DataFrame):
+    total_contracts=df_data.shape[0]
+    total_time_1=df_data['ave_time_x'].sum()
+    total_time_2=df_data['ave_time_y'].sum()
+    total_bugs_1=df_data['ave_bug_x'].sum()
+    total_bugs_2=df_data['ave_bug_y'].sum()
+    total_state_1=df_data['ave_state_x'].sum()
+    total_state_2=df_data['ave_state_y'].sum()
+    ave_cov_1=df_data['ave_cov_x'].mean()
+    ave_cov_2=df_data['ave_cov_y'].mean()
     
     general_data=[total_contracts,total_time_1,total_state_1,total_bugs_1,ave_cov_1]+\
         [total_time_2,total_state_2,total_bugs_2,ave_cov_2]
-    return general_data,time_diff,bug_diff,cov_diff,state_diff
+    return general_data
 
-general_data_1800s,time_diff_1800s,bug_diff_1800s,cov_diff_1800s,state_diff_1800s=get_general_averaged_data(df_averaged_1800s)
-general_data_900s,time_diff_900s,bug_diff_900s,cov_diff_900s,state_diff_900s=get_general_averaged_data(df_averaged_900s)
+timeouts=[1800,900]
+case='smartExecutor_vs_smartExecutor_phase1'
+tools=['smartExecutor','smartExecutor_phase1']
 
-
-
-
-# import numpy 
-
-# import random
-# import numpy
-# from matplotlib import pyplot
-# from utils import plot_helper
-
-
-# import matplotlib.pyplot as plt
-
-
-
-# ranges={
-#         'state_diff_ranges':[['[','min',-1000,']'],['(',-1000,0,']'],['(',0,2000,']'],['(',2000,4000,']'],['(',4000,'max',']']],
-#         'time_diff_ranges':[['[','min',0,']'],['(',0,250,']'],['(',250,500,']'],['(',500,'max',']']],
-#         'bug_diff_ranges':[['[','min',-5,')'],['[',-5,0,')'],[0],['(',0,5,']'],['(',5,'max',']']],
-#         'cov_diff_ranges':[['[','min',-5,')'],['[',-5,0,')'],[0],['(',0,5,']'],['(',5,'max',']']],
-#         }
-
-# ranges_keys=['state_diff_ranges','time_diff_ranges','bug_diff_ranges','cov_diff_ranges']
-# y_labels=['Number of Contracts','Number of Contracts','Number of Contracts','Number of Contracts']
-# x_labels=['Difference of the Number of States','Time Difference (s)','Difference of the Number of Bugs','Coverage Difference (%)']
-
-# data_1800s=[state_diff_1800s,time_diff_1800s,bug_diff_1800s,cov_diff_1800s  ]
-# data_900s=[state_diff_900s,time_diff_900s,bug_diff_900s,cov_diff_900s  ]
-
-# labels_900s=['900s timeout','900s timeout','900s timeout','900s timeout']
-# labels=['1800s timeout','1800s timeout', '1800s timeout','1800s timeout']
-# colors=[(0.2, 0.4, 0.6, 0.6),'orange','green','purple']
-
-# # # fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(nrows=2, ncols=2, sharex=True, sharey=True)
-# # fig, axes = plt.subplots(nrows=2, ncols=2,figsize=(7.5,6))
-
-# # ax0, ax1, ax2, ax3 = axes.flatten()
-
-# # # ax1.plot(range(10), 'r')
-# # # ax1 = fig.add_axes([left, bottom, width, height]) 
-# # width=0.4
-
-
-# # # left, bottom, width, height = 0.1, 0.3, 0.8, 0.6
-# # # ax = fig.add_axes([left, bottom, width, height]) 
-
-# # for index, ax in enumerate( axes.flatten()):
+general_data=[['','total contracts','total_time1','total_states1','total_bugs1','avg_cov1','total_time2','total_states2','total_bugs2','avg_cov2']]
+for timeout in timeouts:    
+    # combine the results of the considered tools   
+    df_combine=pd.DataFrame()
+    for tool in tools:
+        combined_csv_name=tool+"_x_combined_averaged_"+str(timeout)+"s_results.csv"
+        df_data=pd.read_csv(parent_dir+combined_csv_name)
+        df_data_needed=df_data[['solidity','solc','contract','ave_time','ave_state','ave_bug','ave_cov']]
     
-# #     plot_ranges=ranges[ranges_keys[index]]
-   
-# #     name=plot_helper.retrieve_names(plot_ranges)
-# #     plot_data_900s=plot_helper.count_items(data_900s[index],plot_ranges)
-# #     plot_data_1800s=plot_helper.count_items(data_1800s[index],plot_ranges)    
-# #     y_label=y_labels[index]
-# #     x_label=x_labels[index]
+        if df_combine.empty:
+            df_combine=df_data_needed
+        else:
+            df_combine=df_combine.merge(df_data_needed,on=['solidity','solc','contract'])
     
-# #     ticks = np.arange(len(name))    
-# #     bars_900s=ax.bar(ticks, plot_data_900s, width,label=labels_900s[index])
-# #     bars=ax.bar(ticks + width, plot_data_1800s, width,label=labels[index])
-# #     ax.set_ylabel(y_label)
-# #     ax.set_xlabel(x_label)
-# #     ax.set_xticks(ticks)
-# #     ax.set_xticklabels(name)
-# #     # ax.set_xticks(ticks + width/2)
-# #     if index==0:        
-# #         ax.legend(loc='best')
-# #     for bar in bars:
-# #         yval = bar.get_height()
-# #         ax.text(bar.get_x(), yval + 1, yval)
-# #     for bar in bars_900s:
-# #         yval = bar.get_height()
-# #         ax.text(bar.get_x(), yval + 1, yval)
-
-# # fig.tight_layout()  
-# # plt.savefig(parent_dir+"diff_state_time_bug_cov.pdf")  
-# # plt.show()
-
-
-
-# data_to_be_ploted=[data_900s,data_1800s]
-# target=['_900s','_1800s']
-# for i,data in enumerate( data_to_be_ploted):
-
-#     fig, axes = plt.subplots(nrows=2, ncols=2,figsize=(8,5))
-#     width=0.4
-#     for index, ax in enumerate( axes.flatten()):    
-#         plot_ranges=ranges[ranges_keys[index]]   
-#         name=plot_helper.retrieve_names(plot_ranges)
-#         ticks = np.arange(len(name))  
-     
-#         plot_data_1800s=plot_helper.count_items(data[index],plot_ranges) 
-        
-#         y_label=y_labels[index]
-#         x_label=x_labels[index]       
-  
-      
-#         bars=ax.bar(ticks, plot_data_1800s, width,color=colors[index])
-#         ax.set_ylabel(y_label)
-#         ax.set_xlabel(x_label)
-#         ax.set_xticks(ticks)
-#         ax.set_xticklabels(name)
+    # get the data from the combined results
+    df_combine.to_csv(parent_dir+case+"_x_combined_averaged_"+str(timeout)+"s_results.csv",index=False)
+    re=get_general_averaged_data(df_combine)
+    results_for=str(timeout)+"s results"
+    general_data.append([results_for]+re)
     
-#         if index==0:        
-#             ax.legend(loc='best')
-#         for bar in bars:
-#             yval = bar.get_height()
-#             ax.text(bar.get_x(), yval-1, yval)
-#         ax.spines['right'].set_visible(False)
-#         ax.spines['top'].set_visible(False)
+df_general=pd.DataFrame(general_data)
+df_general=df_general.T
+df_general.to_csv(parent_dir+case+"_general_data_on_combined_averaged_data.csv",index=False)
+
+
+#=======================================================
+# plot: SmartExecutor vs Phase 1 of SmartExecutor on the same set of contracts(averaged,combined)
+#======================================================
+timeouts=[1800,900]
+case='SmartExecutor_vs_smartExecutor_phase1'
+for timeout in timeouts:
+    # get the differences for each metrics
+    combined_csv=case+"_x_combined_averaged_"+str(timeout)+"s_results.csv"
+    df_data=pd.read_csv(parent_dir+combined_csv)
+
+    time_diff=df_data.apply(lambda x: x.ave_time_x - x.ave_time_y, axis=1).astype(float)
+    bug_diff=df_data.apply(lambda x: x.ave_bug_x - x.ave_bug_y, axis=1).astype(float)
+    cov_diff=df_data.apply(lambda x: x.ave_cov_x - x.ave_cov_y, axis=1).astype(float)
+    state_diff=df_data.apply(lambda x: x.ave_state_x - x.ave_state_y, axis=1).astype(int)
+
+
+    data=[state_diff,time_diff,bug_diff,cov_diff]
+    target="_"+case+'_'+str(timeout)
     
-#     fig.tight_layout()  
-#     plt.savefig(parent_dir+"diff_state_time_bug_cov"+target[i]+".pdf")  
-#     plt.show()
+    plot_differences_of_metrics(target,data,ranges,ranges_keys,x_labels,y_labels)
+
+
+
+
+
+
+
+
+#=======================================================
+# Mythril vs Phase 1 of SmartExecutor on the same set of contracts(averaged)
+#======================================================
+
+def get_general_averaged_data(df_data:pd.DataFrame):
+    total_contracts=df_data.shape[0]
+    total_time_1=df_data['ave_time_x'].sum()
+    total_time_2=df_data['ave_time_y'].sum()
+    total_bugs_1=df_data['ave_bug_x'].sum()
+    total_bugs_2=df_data['ave_bug_y'].sum()
+    total_state_1=df_data['ave_state_x'].sum()
+    total_state_2=df_data['ave_state_y'].sum()
+    ave_cov_1=df_data['ave_cov_x'].mean()
+    ave_cov_2=df_data['ave_cov_y'].mean()
+    
+    general_data=[total_contracts,total_time_1,total_state_1,total_bugs_1,ave_cov_1]+\
+        [total_time_2,total_state_2,total_bugs_2,ave_cov_2]
+    return general_data
+
+timeouts=[1800,900]
+case='mythril_vs_smartExecutor_phase1'
+tools=['mythril','smartExecutor_phase1']
+
+general_data=[['','total contracts','total_time1','total_states1','total_bugs1','avg_cov1','total_time2','total_states2','total_bugs2','avg_cov2']]
+for timeout in timeouts:    
+    # combine the results of the considered tools   
+    df_combine=pd.DataFrame()
+    for tool in tools:
+        combined_csv_name=tool+"_x_combined_averaged_"+str(timeout)+"s_results.csv"
+        df_data=pd.read_csv(parent_dir+combined_csv_name)
+        df_data_needed=df_data[['solidity','solc','contract','ave_time','ave_state','ave_bug','ave_cov']]
+    
+        if df_combine.empty:
+            df_combine=df_data_needed
+        else:
+            df_combine=df_combine.merge(df_data_needed,on=['solidity','solc','contract'])
+    
+    # get the data from the combined results
+    df_combine.to_csv(parent_dir+case+"_x_combined_averaged_"+str(timeout)+"s_results.csv",index=False)
+    re=get_general_averaged_data(df_combine)
+    results_for=str(timeout)+"s results"
+    general_data.append([results_for]+re)
+    
+df_general=pd.DataFrame(general_data)
+df_general=df_general.T
+df_general.to_csv(parent_dir+case+"_general_data_on_combined_averaged_data.csv",index=False)
+
+
+#=======================================================
+# plot: SmartExecutor vs Phase 1 of SmartExecutor on the same set of contracts(averaged,combined)
+#======================================================
+timeouts=[1800,900]
+case='Mythril_vs_smartExecutor_phase1'
+for timeout in timeouts:
+    # get the differences for each metrics
+    combined_csv=case+"_x_combined_averaged_"+str(timeout)+"s_results.csv"
+    df_data=pd.read_csv(parent_dir+combined_csv)
+
+    time_diff=df_data.apply(lambda x: x.ave_time_x - x.ave_time_y, axis=1).astype(float)
+    bug_diff=df_data.apply(lambda x: x.ave_bug_x - x.ave_bug_y, axis=1).astype(float)
+    cov_diff=df_data.apply(lambda x: x.ave_cov_x - x.ave_cov_y, axis=1).astype(float)
+    state_diff=df_data.apply(lambda x: x.ave_state_x - x.ave_state_y, axis=1).astype(int)
+
+
+    data=[state_diff,time_diff,bug_diff,cov_diff]
+    target="_"+case+'_'+str(timeout)
+    
+    plot_differences_of_metrics(target,data,ranges,ranges_keys,x_labels,y_labels)
+
+
+
+
+
+
+
+
+#=======================================================
+# Mythril vs SmartExecutor vs Phase 1 of SmartExecutor on the same set of contracts(averaged)
+#======================================================
+def get_general_averaged_data(df_data:pd.DataFrame):
+    total_contracts=df_data.shape[0]
+    total_time_1=df_data['ave_time_x'].sum()
+    total_time_2=df_data['ave_time_y'].sum()
+    total_time_3=df_data['ave_time_z'].sum()
+    total_bugs_1=df_data['ave_bug_x'].sum()
+    total_bugs_2=df_data['ave_bug_y'].sum()
+    total_bugs_3=df_data['ave_bug_z'].sum()
+    total_state_1=df_data['ave_state_x'].sum()
+    total_state_2=df_data['ave_state_y'].sum()
+    total_state_3=df_data['ave_state_z'].sum()
+    ave_cov_1=df_data['ave_cov_x'].mean()
+    ave_cov_2=df_data['ave_cov_y'].mean()
+    ave_cov_3=df_data['ave_cov_z'].mean()
+    
+    general_data=[total_contracts,total_time_1,total_state_1,total_bugs_1,ave_cov_1]+\
+        [total_time_2,total_state_2,total_bugs_2,ave_cov_2]+\
+          [total_time_3,total_state_3,total_bugs_3,ave_cov_3]
+    return general_data
+
+timeouts=[1800,900]
+case='mythril_vs_smartExecutor_vs_phase1_of_smartExecutor'
+tools=['mythril','smartExecutor','smartExecutor_phase1']
+general_data=[['','total contracts','total_time1','total_states1','total_bugs1','avg_cov1']+\
+              ['total_time2','total_states2','total_bugs2','avg_cov2']+\
+                  ['total_time3','total_states3','total_bugs3','avg_cov3']
+              ]
+
+identifiers=['_x','_y','_z']
+for timeout in timeouts:
+    # combine the results of the considered tools   
+    df_combine=pd.DataFrame()
+    for idx,tool in enumerate(tools):
+        combined_csv_name=tool+"_x_combined_averaged_"+str(timeout)+"s_results.csv"
+        df_data=pd.read_csv(parent_dir+combined_csv_name)
+        df_data_needed=df_data[['solidity','solc','contract','ave_time','ave_state','ave_bug','ave_cov']]
+        # change the column names
+        df_data_needed.columns=['solidity','solc','contract','ave_time'+identifiers[idx],'ave_state'+identifiers[idx],'ave_bug'+identifiers[idx],'ave_cov'+identifiers[idx]]
+    
+        if df_combine.empty:
+            df_combine=df_data_needed
+        else:
+            df_combine=df_combine.merge(df_data_needed,on=['solidity','solc','contract'])
+    
+    df_combine.to_csv(parent_dir+case+"_x_combined_averaged_"+str(timeout)+"s_results.csv",index=False)
+    
+    # get the data from the combined results
+    df_combine.to_csv(parent_dir+case+"_x_combined_averaged_"+str(timeout)+"s_results.csv",index=False)
+    re=get_general_averaged_data(df_combine)
+    results_for=str(timeout)+"s results"
+    general_data.append([results_for]+re)    
+
+df_general=pd.DataFrame(general_data)
+df_general=df_general.T
+df_general.to_csv(parent_dir+case+"_general_data_on_combined_averaged_data.csv",index=False)
+    
+
+
 
